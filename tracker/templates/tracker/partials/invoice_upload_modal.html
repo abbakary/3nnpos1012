@@ -489,3 +489,317 @@
   }
 }
 </style>
+
+<script>
+// Invoice Upload Modal - Extraction Handler
+(function() {
+  const fileInput = document.getElementById('startedOrderInvoiceFile');
+  const uploadBtn = document.getElementById('startedUploadBtn');
+  const errorBox = document.getElementById('startedUploadError');
+  const successMsg = document.getElementById('extractionSuccess');
+  const progressWrap = document.getElementById('startedUploadProgress');
+  const progressBar = document.getElementById('startedUploadProgressBar');
+  const previewSection = document.getElementById('uploadedInvoicePreview');
+  const lineItemsSection = document.getElementById('extractedLineItemsSection');
+  const lineItemsBody = document.getElementById('lineItemRowsBody');
+  const hiddenFieldsDiv = document.getElementById('extractedHiddenFields');
+  const manualForm = document.getElementById('manualInvoiceForm');
+
+  if (!uploadBtn) return;
+
+  function getCSRF() {
+    const name = 'csrftoken=';
+    const parts = document.cookie.split(';');
+    for (let i = 0; i < parts.length; i++) {
+      const c = parts[i].trim();
+      if (c.indexOf(name) === 0) return c.substring(name.length);
+    }
+    const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return el ? el.value : '';
+  }
+
+  function setProgress(p) {
+    if (progressBar) progressBar.style.width = Math.max(0, Math.min(100, p)) + '%';
+    if (progressWrap) progressWrap.style.display = p > 0 && p < 100 ? 'block' : (p >= 100 ? 'block' : 'none');
+  }
+
+  uploadBtn.addEventListener('click', async function() {
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-warning me-2"></i>Please select a PDF file to upload.';
+      errorBox.className = 'alert alert-warning';
+      successMsg.style.display = 'none';
+      return;
+    }
+
+    const file = fileInput.files[0];
+    if (file.size > 50 * 1024 * 1024) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-warning me-2"></i>File is too large. Maximum size is 50MB.';
+      errorBox.className = 'alert alert-warning';
+      return;
+    }
+
+    errorBox.style.display = 'none';
+    successMsg.style.display = 'none';
+    setProgress(5);
+    uploadBtn.disabled = true;
+    const originalText = uploadBtn.innerHTML;
+    uploadBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Extracting...';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const plateField = manualForm.querySelector('[name="plate"]');
+      if (plateField && plateField.value) {
+        formData.append('plate', plateField.value);
+      }
+
+      const orderIdField = manualForm.querySelector('[name="selected_order_id"]');
+      if (orderIdField && orderIdField.value) {
+        formData.append('selected_order_id', orderIdField.value);
+      }
+
+      const customerIdField = manualForm.querySelector('[name="customer_id"]');
+      if (customerIdField && customerIdField.value) {
+        formData.append('pre_selected_customer_id', customerIdField.value);
+      }
+
+      setProgress(10);
+
+      const response = await fetch('{% url "tracker:api_upload_extract_invoice" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCSRF()
+        }
+      });
+
+      setProgress(90);
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data || !data.success) {
+        throw new Error(data?.message || 'Extraction failed');
+      }
+
+      setProgress(100);
+
+      // Populate preview
+      const header = data.header || {};
+      populatePreview(header);
+
+      // Populate line items
+      const items = data.items || [];
+      populateLineItems(items);
+
+      // Populate form fields
+      populateFormFields(header);
+
+      // Show success
+      successMsg.style.display = 'block';
+      previewSection.style.display = 'block';
+      if (items.length > 0) {
+        lineItemsSection.style.display = 'block';
+      }
+
+      errorBox.style.display = 'none';
+
+    } catch (err) {
+      setProgress(0);
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-exclamation-triangle me-2"></i>' + (err?.message || 'Upload failed');
+      errorBox.className = 'alert alert-danger';
+      successMsg.style.display = 'none';
+      console.error('Extraction error:', err);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = originalText;
+      setProgress(0);
+    }
+  });
+
+  function populatePreview(header) {
+    const map = {
+      'previewCustomerName': 'customer_name',
+      'previewCustomerPhone': 'phone',
+      'previewCustomerEmail': 'email',
+      'previewCustomerAddress': 'address',
+      'previewInvoiceNo': 'invoice_no',
+      'previewInvoiceDate': 'date',
+      'previewCodeNo': 'code_no',
+      'previewReference': 'reference'
+    };
+
+    Object.keys(map).forEach(elementId => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        const value = header[map[elementId]] || '-';
+        el.textContent = value;
+      }
+    });
+
+    if (document.getElementById('previewSubtotal')) {
+      const subtotal = header.subtotal || 0;
+      document.getElementById('previewSubtotal').textContent = parseFloat(subtotal).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    }
+
+    if (document.getElementById('previewTax')) {
+      const tax = header.tax || 0;
+      document.getElementById('previewTax').textContent = parseFloat(tax).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    }
+
+    if (document.getElementById('previewTotal')) {
+      const total = header.total || 0;
+      document.getElementById('previewTotal').textContent = parseFloat(total).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    }
+  }
+
+  function populateLineItems(items) {
+    lineItemsBody.innerHTML = '';
+    hiddenFieldsDiv.innerHTML = '';
+
+    if (!items || items.length === 0) {
+      lineItemsSection.style.display = 'none';
+      return;
+    }
+
+    lineItemsSection.style.display = 'block';
+
+    items.forEach((item, idx) => {
+      const code = item.code || '';
+      const desc = item.description || '';
+      const unit = item.unit || '';
+      const qty = item.qty || 1;
+      const rate = item.rate || 0;
+      const value = item.value || (qty * rate);
+
+      // Create table row
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="text-center"><small>${idx + 1}</small></td>
+        <td><small>${code || '-'}</small></td>
+        <td><small>${desc}</small></td>
+        <td><small>${unit || '-'}</small></td>
+        <td><input type="number" class="form-control form-control-sm" value="${qty}" min="1" data-item-index="${idx}"></td>
+        <td><input type="number" class="form-control form-control-sm" value="${rate.toFixed(2)}" step="0.01" min="0" data-item-index="${idx}"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-danger remove-line-item" data-item-index="${idx}"><i class="fa fa-trash"></i></button></td>
+      `;
+      lineItemsBody.appendChild(row);
+
+      // Create hidden form fields
+      const fields = [
+        { name: 'item_code[]', value: code },
+        { name: 'item_description[]', value: desc },
+        { name: 'item_unit[]', value: unit },
+        { name: 'item_qty[]', value: qty },
+        { name: 'item_price[]', value: rate }
+      ];
+
+      fields.forEach(field => {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = field.name;
+        inp.value = field.value;
+        inp.dataset.itemIndex = idx;
+        hiddenFieldsDiv.appendChild(inp);
+      });
+    });
+
+    // Attach remove button handlers
+    document.querySelectorAll('.remove-line-item').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const idx = this.dataset.itemIndex;
+        document.querySelectorAll(`tr[data-item-index="${idx}"]`).forEach(el => el.remove());
+        document.querySelectorAll(`input[data-item-index="${idx}"]`).forEach(el => el.remove());
+      });
+    });
+
+    // Add row data update listeners
+    document.querySelectorAll('.line-items-body input').forEach(input => {
+      input.addEventListener('change', function() {
+        const idx = this.dataset.itemIndex;
+        const hiddenInputs = hiddenFieldsDiv.querySelectorAll(`input[data-item-index="${idx}"]`);
+
+        // Update corresponding hidden field based on column
+        if (this.classList.contains('qty-input')) {
+          const qtyField = Array.from(hiddenInputs).find(i => i.name === 'item_qty[]');
+          if (qtyField) qtyField.value = this.value;
+        } else if (this.classList.contains('rate-input')) {
+          const rateField = Array.from(hiddenInputs).find(i => i.name === 'item_price[]');
+          if (rateField) rateField.value = this.value;
+        }
+      });
+    });
+  }
+
+  function populateFormFields(header) {
+    const fieldMap = {
+      'manualCustomerName': 'customer_name',
+      'manualCustomerPhone': 'phone',
+      'invoiceNumberField': 'invoice_no',
+      'codeNoField': 'code_no',
+      'referenceField': 'reference'
+    };
+
+    Object.keys(fieldMap).forEach(inputId => {
+      const el = manualForm.querySelector('[id="' + inputId + '"]');
+      if (el) {
+        const value = header[fieldMap[inputId]] || '';
+        el.value = value;
+      }
+    });
+
+    // Set address
+    const addressInput = manualForm.querySelector('[name="customer_address"]');
+    if (addressInput) {
+      addressInput.value = header.address || '';
+    }
+
+    // Set email
+    const emailInput = manualForm.querySelector('[name="customer_email"]');
+    if (emailInput) {
+      emailInput.value = header.email || '';
+    }
+
+    // Set invoice date
+    const dateInput = manualForm.querySelector('[name="invoice_date"]');
+    if (dateInput && header.date) {
+      let formattedDate = header.date;
+      const dateMatch = String(header.date).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dateMatch) {
+        formattedDate = dateMatch[3] + '-' + String(dateMatch[2]).padStart(2, '0') + '-' + String(dateMatch[1]).padStart(2, '0');
+      }
+      dateInput.value = formattedDate;
+    }
+
+    // Set monetary values
+    const subtotalInput = manualForm.querySelector('[name="subtotal"]');
+    const taxInput = manualForm.querySelector('[name="tax_amount"]');
+    const totalInput = manualForm.querySelector('[name="total_amount"]');
+
+    if (subtotalInput) subtotalInput.value = header.subtotal || 0;
+    if (taxInput) taxInput.value = header.tax || 0;
+    if (totalInput) totalInput.value = header.total || 0;
+
+    // Store seller and additional info in hidden fields
+    const sellerKeys = ['seller_name', 'seller_address', 'seller_phone', 'seller_email', 'seller_tax_id', 'seller_vat_reg'];
+    sellerKeys.forEach(key => {
+      if (header[key]) {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = key;
+        inp.value = header[key];
+        hiddenFieldsDiv.appendChild(inp);
+      }
+    });
+  }
+})();
+</script>
