@@ -587,8 +587,9 @@ def parse_item_complete(item_lines, item_number):
         }
     
     # Fallback: Extract numbers and try to make sense of them
+    # Use cleaned_text that has VAT% removed
     numbers = []
-    number_matches = re.finditer(r'([\d,]+\.?\d*)', full_text)
+    number_matches = re.finditer(r'([\d,]+\.?\d*)', cleaned_text)
     for match in number_matches:
         try:
             num_str = match.group(1).replace(',', '')
