@@ -609,29 +609,30 @@ def parse_item_complete(item_lines, item_number):
         unit = unit_match.group(1).upper()
 
     # Identify quantities and values
-    quantities = [n for n in numbers if n['is_integer'] and 0 < n['value'] < 1000]
-    potential_rates = [n for n in numbers if not n['is_integer'] or n['value'] >= 1000]
-    
+    # Only consider integers less than 100 as potential quantities (avoid product codes like 2132004135)
+    quantities = [n for n in numbers if n['is_integer'] and 0 < n['value'] < 100]
+    potential_rates = [n for n in numbers if not n['is_integer'] or (n['value'] >= 100 and n['value'] < 1000000)]
+
     # Determine quantity and rate
     quantity = 1
     rate = None
     value = None
-    
+
     if quantities and potential_rates:
-        # Use smallest integer as quantity, largest number as potential value
-        quantity = int(min([q['value'] for q in quantities]))
+        # Use smallest integer (but > 0) as quantity
+        quantity = int(min([q['value'] for q in quantities if q['value'] > 0]))
         largest_value = max([r['value'] for r in potential_rates])
-        
-        # Check if largest value makes sense as total value
-        if largest_value > 1000:  # Likely a total value
+
+        # Check if largest value makes sense as total value (qty * rate should match)
+        if largest_value > 10000:  # Likely a total value (large number)
             value = Decimal(str(largest_value))
-            rate = value / Decimal(quantity)
+            rate = value / Decimal(quantity) if quantity > 0 else Decimal('0')
         else:
             rate = Decimal(str(largest_value))
-            value = rate * Decimal(quantity)
+            value = rate * Decimal(quantity) if quantity > 0 else Decimal('0')
     elif quantities:
-        quantity = int(min([q['value'] for q in quantities]))
-        # No rate found, set default
+        # Only quantities found, no rate
+        quantity = int(min([q['value'] for q in quantities if q['value'] > 0]))
         rate = Decimal('0')
         value = Decimal('0')
     elif potential_rates:
