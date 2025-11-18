@@ -419,7 +419,7 @@
                     {% with inv=o.invoices.all|first %}
                     {% if inv %}
                     <li>
-                      <a class="dropdown-item" href="{% url 'tracker:invoice_detail' pk=inv.id %}">
+                      <a class="dropdown-item" href="{% url 'tracker:order_detail' pk=o.id %}#invoice-section">
                         <i class="fa fa-file-invoice me-2 text-primary"></i>View Invoice
                       </a>
                     </li>
@@ -442,7 +442,7 @@
                     {% endif %}
                     {% else %}
                     <li>
-                      <a class="dropdown-item" href="{% url 'tracker:invoice_upload' %}">
+                      <a class="dropdown-item" href="{% url 'tracker:order_detail' pk=o.id %}#invoice-section">
                         <i class="fa fa-file-upload me-2 text-primary"></i>Upload Invoice
                       </a>
                     </li>
