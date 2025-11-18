@@ -354,13 +354,13 @@ def parse_invoice_data(text: str) -> dict:
     except Exception:
         pass
 
-    # Helper function to extract field values
+    # Helper function to extract field values (use extraction_lines that start from Proforma Invoice)
     def extract_field_value(label_patterns, max_lines=3):
         patterns = label_patterns if isinstance(label_patterns, list) else [label_patterns]
-        
+
         for pattern in patterns:
             # Look for pattern in text
-            for i, line in enumerate(lines):
+            for i, line in enumerate(extraction_lines):
                 if re.search(pattern, line, re.I):
                     # Try to extract value from same line
                     match = re.search(rf'{pattern}\s*[:=]?\s*(.+)', line, re.I)
@@ -368,10 +368,10 @@ def parse_invoice_data(text: str) -> dict:
                         value = match.group(1).strip()
                         if value:
                             return value
-                    
+
                     # Look in next lines
-                    for j in range(1, min(max_lines + 1, len(lines) - i)):
-                        next_line = lines[i + j].strip()
+                    for j in range(1, min(max_lines + 1, len(extraction_lines) - i)):
+                        next_line = extraction_lines[i + j].strip()
                         if next_line and not re.match(r'^(?:Tel|Fax|Email|Address|Reference|PI|Date)', next_line, re.I):
                             return next_line
         return None
