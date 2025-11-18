@@ -309,118 +309,180 @@
 </div>
 
 <style>
-/* Line items table responsive styling */
+/* Line items table - proper layout that handles long descriptions */
 .line-items-table {
   font-size: 0.85rem;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.line-items-table thead {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
 }
 
 .line-items-table th,
 .line-items-table td {
-  padding: 0.5rem 0.4rem;
-  overflow: hidden;
+  padding: 0.6rem 0.4rem;
+  vertical-align: middle;
+  border: 1px solid #dee2e6;
 }
 
+.line-items-table th {
+  font-weight: 600;
+  text-align: left;
+  background-color: #f8f9fa;
+}
+
+/* Column width definitions - using percentages for fixed layout */
 .line-item-col-num {
-  width: 50px;
+  width: 5%;
   text-align: center;
-  flex-shrink: 0;
 }
 
 .line-item-col-code {
-  width: 100px;
-  min-width: 100px;
+  width: 12%;
 }
 
 .line-item-col-desc {
-  min-width: 180px;
-  flex-grow: 1;
+  width: 40%;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .line-item-col-unit {
-  width: 70px;
+  width: 10%;
 }
 
 .line-item-col-qty {
-  width: 80px;
+  width: 10%;
 }
 
 .line-item-col-rate {
-  width: 110px;
+  width: 15%;
 }
 
 .line-item-col-actions {
-  width: 60px;
+  width: 8%;
   text-align: center;
-  flex-shrink: 0;
 }
 
+/* Input styling within table */
 .line-items-table input[type="text"],
 .line-items-table input[type="number"] {
   width: 100%;
-  padding: 0.3rem;
+  padding: 0.4rem 0.3rem;
   font-size: 0.85rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  font-family: inherit;
 }
 
 .line-items-table input[type="text"]::placeholder,
 .line-items-table input[type="number"]::placeholder {
   font-size: 0.8rem;
-}
-
-/* Remove input borders for cleaner look */
-.line-items-table input[type="text"],
-.line-items-table input[type="number"] {
-  border: 1px solid #dee2e6;
+  color: #999;
 }
 
 .line-items-table input[type="text"]:focus,
 .line-items-table input[type="number"]:focus {
   border-color: #80bdff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  outline: none;
 }
 
-/* Make description column wrap if needed */
-.line-items-table .line-item-col-desc {
-  word-break: break-word;
-  white-space: normal;
-}
-
-/* Remove button styling for better consistency */
+/* Button styling */
 .line-items-table .remove-line-item {
   padding: 0.3rem 0.5rem;
   font-size: 1rem;
   line-height: 1;
+  border: 1px solid #dc3545;
+  background-color: white;
+  color: #dc3545;
+  cursor: pointer;
 }
 
+.line-items-table .remove-line-item:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Body styling for consistent row heights */
+.line-items-body tr {
+  height: auto;
+}
+
+/* Ensure descriptions wrap and don't overflow */
+.line-items-table .line-item-col-desc {
+  max-width: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* Responsive adjustments */
 @media (max-width: 1200px) {
+  .line-items-table {
+    font-size: 0.8rem;
+  }
+
   .line-item-col-desc {
-    min-width: 150px;
+    width: 35%;
+  }
+
+  .line-item-col-code {
+    width: 10%;
+  }
+
+  .line-item-col-rate {
+    width: 12%;
   }
 }
 
 @media (max-width: 768px) {
+  .line-items-table {
+    font-size: 0.75rem;
+  }
+
   .line-items-table th,
   .line-items-table td {
-    padding: 0.3rem 0.25rem;
-    font-size: 0.75rem;
+    padding: 0.4rem 0.25rem;
   }
 
   .line-items-table input[type="text"],
   .line-items-table input[type="number"] {
-    padding: 0.2rem;
+    padding: 0.3rem 0.2rem;
     font-size: 0.75rem;
   }
 
+  .line-item-col-num {
+    width: 6%;
+  }
+
   .line-item-col-code {
-    width: 80px;
-    min-width: 80px;
+    width: 10%;
   }
 
   .line-item-col-desc {
-    min-width: 120px;
+    width: 30%;
+  }
+
+  .line-item-col-unit {
+    width: 8%;
+  }
+
+  .line-item-col-qty {
+    width: 8%;
   }
 
   .line-item-col-rate {
-    width: 90px;
+    width: 12%;
+  }
+
+  .line-item-col-actions {
+    width: 10%;
   }
 }
 </style>
