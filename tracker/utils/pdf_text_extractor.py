@@ -483,12 +483,15 @@ def parse_item_complete(item_lines, item_number):
             item_code = code_match.group(1)
             logger.info(f"Extracted item code from text: {item_code}")
 
-    # IMPROVED PATTERN MATCHING - Handle VAT% in rate column
-    # Remove VAT percentages from the text first to clean up parsing
+    # CRITICAL: Extract values exactly as shown in the document - NO CALCULATIONS
+    # This preserves the actual invoice data without risk of recalculation errors
+
+    # Remove VAT percentages temporarily for pattern matching, but keep track of them
     cleaned_text = re.sub(r'\s*\d+\.?\d*%\s*', ' ', full_text).strip()
 
-    # Pattern: Description Unit Qty Rate Value
-    pattern_complete = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{2})\s+([\d,]+\.?\d{2})$'
+    # Primary Pattern: Description Unit Qty Rate Value (most complete)
+    # Matches: "DESCRIPTION UNIT QTY RATE VALUE"
+    pattern_complete = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{1,2})\s+([\d,]+\.?\d{1,2})$'
     match_complete = re.search(pattern_complete, cleaned_text)
 
     if match_complete:
@@ -502,7 +505,7 @@ def parse_item_complete(item_lines, item_number):
         if item_code and item_code in description:
             description = description.replace(item_code, '', 1).strip()
 
-        logger.info(f"Complete pattern match - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value}")
+        logger.info(f"Complete pattern match - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value} (extracted as-is)")
 
         return {
             'code': item_code,
@@ -513,8 +516,9 @@ def parse_item_complete(item_lines, item_number):
             'value': value
         }
 
-    # Pattern for items with unit after description
-    pattern_with_unit = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{2})'
+    # Secondary Pattern: Description Unit Qty Rate (no Value found - extract what's available)
+    # In this case, extract only what we have - do NOT calculate value
+    pattern_with_unit = r'^(.+?)\s+(PCS|NOS|KG|HR|LTR|PC|UNT|BOX|SET|UNIT|PIECES|TYRE|TIRE)\s+(\d+)\s+([\d,]+\.?\d{1,2})'
     match_with_unit = re.search(pattern_with_unit, cleaned_text)
 
     if match_with_unit:
@@ -523,14 +527,26 @@ def parse_item_complete(item_lines, item_number):
         qty = int(match_with_unit.group(3))
         rate = Decimal(match_with_unit.group(4).replace(',', ''))
 
-        # Calculate value as qty * rate (without VAT)
-        value = rate * Decimal(qty)
+        # Try to find Value separately from the remaining text
+        # Look for another large number after the rate
+        remaining = cleaned_text[match_with_unit.end():].strip()
+        value = None
+
+        # Try to extract value from the remaining text (should be the next large number)
+        if remaining:
+            value_match = re.search(r'([\d,]+\.?\d{1,2})', remaining)
+            if value_match:
+                value = Decimal(value_match.group(1).replace(',', ''))
+                logger.info(f"Unit pattern match + extracted Value separately - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value}")
+
+        # If value couldn't be extracted separately, use rate (as a last resort, not calculated)
+        if value is None:
+            value = rate
+            logger.info(f"Unit pattern match (no Value found) - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {rate} (no calculation)")
 
         # Remove item code from description if present
         if item_code and item_code in description:
             description = description.replace(item_code, '', 1).strip()
-
-        logger.info(f"Unit pattern match - Code: {item_code}, Desc: {description[:50]}, Unit: {unit}, Qty: {qty}, Rate: {rate}, Value: {value}")
 
         return {
             'code': item_code,
