@@ -426,17 +426,11 @@ def dashboard(request: HttpRequest):
             'new_customers_this_month': new_customers_this_month,
             'pending_inquiries_count': pending_inquiries_count,
             'average_order_value': average_order_value,
-            # Revenue metrics - now calculated from invoice.subtotal (Net Value excluding VAT)
-            # These work for both manually created and extracted invoices
-            'total_revenue': total_revenue,            # Net revenue (subtotal) from all invoices
-            'total_paid': total_revenue,               # Alias for backward compatibility
-            'revenue_this_month': revenue_this_month,  # Net revenue this month
-            'total_invoiced': total_invoiced,          # Gross value (subtotal + VAT) - backward compat
-            'invoiced_this_month': invoiced_this_month,
-            'total_vat': total_vat,                    # Total VAT from all invoices
-            'vat_this_month': vat_this_month,          # VAT this month
-            'total_gross': total_gross,                # Gross value (total_amount = subtotal + VAT)
-            'gross_this_month': gross_this_month,      # Gross this month
+            # Revenue KPIs - Fresh calculation based on Gross Revenue (subtotal + VAT)
+            'gross_revenue_this_month': gross_revenue_this_month,      # Gross revenue this month
+            'total_gross_revenue': total_gross_revenue,                # Total gross revenue (all time)
+            'avg_invoice_amount': avg_invoice_amount,                  # Average invoice amount
+            'invoices_this_month_count': invoices_this_month_count,    # Number of invoices this month
             'upcoming_appointments': list(upcoming_appointments.values('id', 'customer__full_name', 'created_at')),
             'top_customers': list(top_customers.values('id', 'full_name', 'order_count', 'phone', 'email', 'total_spent', 'latest_order_date', 'registration_date')),
             'recent_orders': list(orders_qs.select_related("customer").exclude(status="completed").order_by("-created_at").values('id', 'customer__full_name', 'status', 'created_at')[:10]),
