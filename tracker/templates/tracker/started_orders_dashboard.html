@@ -175,7 +175,7 @@
   <div class="row g-3">
     {% for order in orders %}
     <div class="col-xl-4 col-lg-6 col-md-12">
-      <div class="card started-order-card shadow-sm h-100 border-start border-4" style="border-color: {% if order.status == 'created' %}#667eea{% elif order.status == 'in_progress' %}#ffc107{% else %}#28a745{% endif %} !important;">
+      <div class="card started-order-card shadow-sm h-100 border-start border-4" style="border-color: {% if order.status == 'created' %}#6c757d{% elif order.status == 'in_progress' %}#ffc107{% elif order.status == 'overdue' %}#dc3545{% elif order.status == 'completed' %}#28a745{% else %}#6c757d{% endif %} !important;">
         <div class="card-header bg-white d-flex justify-content-between align-items-start">
           <div>
             <h6 class="card-title mb-1">
