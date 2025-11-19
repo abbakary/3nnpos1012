@@ -338,16 +338,16 @@ def started_orders_dashboard(request):
         orders_by_plate[plate].append(order)
 
     # Calculate statistics
-    # Total started orders: both 'created' (just initiated) and 'in_progress' (actively being worked on)
+    # Total started orders: all active statuses (created, in_progress, overdue)
     from django.db.models import Q, Count
     total_started = base_orders.filter(
-        status__in=['created', 'in_progress']
+        status__in=['created', 'in_progress', 'overdue']
     ).count()
 
     # Orders started today: those created today (before or after auto-progression)
     today = timezone.now().date()
     today_started = base_orders.filter(
-        status__in=['created', 'in_progress'],
+        status__in=['created', 'in_progress', 'overdue'],
         created_at__date=today
     ).count()
 
