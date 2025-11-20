@@ -378,25 +378,16 @@
               <td class="text-muted small">{{ o.created_at|localtime|date_medium }}</td>
               <td>
                 <div class="time-tracking-cell">
-                  {% if o.estimated_duration %}
-                    <div class="d-flex gap-3 align-items-center flex-wrap">
+                  {% with actual_time=o|actual_time_minutes %}
+                    {% if actual_time %}
                       <div class="time-item">
-                        <small class="text-muted d-block fw-medium">Est</small>
-                        <div class="time-value fw-semibold">{{ o.estimated_duration|format_minutes }}</div>
+                        <small class="text-muted d-block fw-medium">Actual Time</small>
+                        <div class="time-value fw-semibold">{{ actual_time|format_minutes }}</div>
                       </div>
-                      <div class="time-divider text-muted small">→</div>
-                      <div class="time-item">
-                        <small class="text-muted d-block fw-medium">Actual</small>
-                        <div class="time-value fw-semibold">{{ o|actual_time_minutes|format_minutes }}</div>
-                      </div>
-                      <div class="time-status">
-                    
-                       
-                      </div>
-                    </div>
-                  {% else %}
-                    <span class="badge bg-light text-muted">No estimate</span>
-                  {% endif %}
+                    {% else %}
+                      <span class="badge bg-light text-muted">In Progress</span>
+                    {% endif %}
+                  {% endwith %}
                 </div>
               </td>
               <td class="text-end">

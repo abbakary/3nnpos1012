@@ -63,57 +63,67 @@
             </div>
           </div>
 
-          <!-- Extracted Data Preview -->
+          <!-- Extracted Data Preview with Editable Fields -->
           <div id="extractedDataPreview" style="display:none;" class="card mb-3">
             <div class="card-header bg-light">
               <strong><i class="fa fa-check-circle me-2 text-success"></i>Extracted Information</strong>
-              <small class="text-muted ms-2">Review before confirming</small>
+              <small class="text-muted ms-2">Review and edit before confirming</small>
             </div>
-            <div class="card-body" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa;">
-              <!-- Customer Information -->
-              <div class="mb-3">
-                <h6 class="text-muted mb-2"><i class="fa fa-user me-2"></i>Customer</h6>
-                <div class="row g-2">
+            <div class="card-body" style="max-height: 600px; overflow-y: auto; background-color: #f8f9fa;">
+              <!-- Customer Information - Editable -->
+              <div class="mb-4">
+                <h6 class="text-muted mb-3"><i class="fa fa-user me-2"></i>Customer Information</h6>
+                <div class="row g-3">
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Name</small>
-                    <p id="previewCustomerName" class="mb-2 fw-medium">-</p>
+                    <label class="form-label small fw-medium">Customer Name *</label>
+                    <input type="text" id="editableCustomerName" class="form-control form-control-sm" placeholder="Customer name">
                   </div>
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Phone</small>
-                    <p id="previewCustomerPhone" class="mb-2 fw-medium">-</p>
+                    <label class="form-label small fw-medium">Phone *</label>
+                    <input type="text" id="editableCustomerPhone" class="form-control form-control-sm" placeholder="Phone number">
                   </div>
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Email</small>
-                    <p id="previewCustomerEmail" class="mb-2">-</p>
+                    <label class="form-label small fw-medium">Email</label>
+                    <input type="email" id="editableCustomerEmail" class="form-control form-control-sm" placeholder="Email address">
                   </div>
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Address</small>
-                    <p id="previewCustomerAddress" class="mb-2">-</p>
+                    <label class="form-label small fw-medium">Address</label>
+                    <input type="text" id="editableCustomerAddress" class="form-control form-control-sm" placeholder="Address">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-medium">Customer Type</label>
+                    <select id="editableCustomerType" class="form-select form-select-sm">
+                      <option value="">-- Select --</option>
+                      <option value="personal">Personal</option>
+                      <option value="company">Private Company</option>
+                      <option value="ngo">NGO</option>
+                      <option value="government">Government</option>
+                    </select>
                   </div>
                 </div>
               </div>
 
               <hr class="my-3">
 
-              <!-- Invoice Information -->
-              <div class="mb-3">
-                <h6 class="text-muted mb-2"><i class="fa fa-file-invoice me-2"></i>Invoice Details</h6>
-                <div class="row g-2">
+              <!-- Invoice Information - Editable -->
+              <div class="mb-4">
+                <h6 class="text-muted mb-3"><i class="fa fa-file-invoice me-2"></i>Invoice Details</h6>
+                <div class="row g-3">
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Invoice Number</small>
-                    <p id="previewInvoiceNo" class="mb-2"><strong>-</strong></p>
+                    <label class="form-label small fw-medium">Invoice Number</label>
+                    <input type="text" id="editableInvoiceNo" class="form-control form-control-sm" placeholder="Invoice number">
                   </div>
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Invoice Date</small>
-                    <p id="previewInvoiceDate" class="mb-2"><strong>-</strong></p>
+                    <label class="form-label small fw-medium">Invoice Date</label>
+                    <input type="date" id="editableInvoiceDate" class="form-control form-control-sm">
                   </div>
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Code No</small>
-                    <p id="previewCodeNo" class="mb-2">-</p>
+                    <label class="form-label small fw-medium">Code No</label>
+                    <input type="text" id="editableCodeNo" class="form-control form-control-sm" placeholder="Supplier code number">
                   </div>
                   <div class="col-md-6">
-                    <small class="text-muted d-block">Reference</small>
-                    <p id="previewReference" class="mb-2">-</p>
+                    <label class="form-label small fw-medium">Reference</label>
+                    <input type="text" id="editableReference" class="form-control form-control-sm" placeholder="Customer PO or reference">
                   </div>
                 </div>
               </div>
@@ -339,6 +349,27 @@
   invoiceForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    // Validate required fields
+    const customerName = document.getElementById('editableCustomerName')?.value.trim();
+    const customerPhone = document.getElementById('editableCustomerPhone')?.value.trim();
+
+    if (!customerName) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-warning me-2"></i>Customer name is required.';
+      errorBox.className = 'alert alert-warning';
+      return;
+    }
+
+    if (!customerPhone) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = '<i class="fa fa-warning me-2"></i>Customer phone is required.';
+      errorBox.className = 'alert alert-warning';
+      return;
+    }
+
+    // Update form fields from editable inputs
+    updateFormFieldsFromEditable();
+
     if (!fileInput.files || !fileInput.files[0]) {
       errorBox.style.display = 'block';
       errorBox.innerHTML = '<i class="fa fa-warning me-2"></i>No PDF file was uploaded or extracted.';
@@ -500,25 +531,45 @@
   });
 
   function populatePreview(header) {
-    const map = {
-      'previewCustomerName': 'customer_name',
-      'previewCustomerPhone': 'phone',
-      'previewCustomerEmail': 'email',
-      'previewCustomerAddress': 'address',
-      'previewInvoiceNo': 'invoice_no',
-      'previewInvoiceDate': 'date',
-      'previewCodeNo': 'code_no',
-      'previewReference': 'reference'
+    // Populate editable customer fields
+    const customerFieldMap = {
+      'editableCustomerName': 'customer_name',
+      'editableCustomerPhone': 'phone',
+      'editableCustomerEmail': 'email',
+      'editableCustomerAddress': 'address'
     };
 
-    Object.keys(map).forEach(elementId => {
+    Object.keys(customerFieldMap).forEach(elementId => {
       const el = document.getElementById(elementId);
       if (el) {
-        const value = header[map[elementId]] || '-';
-        el.textContent = value;
+        const value = header[customerFieldMap[elementId]] || '';
+        el.value = value;
       }
     });
 
+    // Populate editable invoice detail fields
+    const invoiceFieldMap = {
+      'editableInvoiceNo': 'invoice_no',
+      'editableCodeNo': 'code_no',
+      'editableReference': 'reference'
+    };
+
+    Object.keys(invoiceFieldMap).forEach(elementId => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        const value = header[invoiceFieldMap[elementId]] || '';
+        el.value = value;
+      }
+    });
+
+    // Populate invoice date
+    const dateEl = document.getElementById('editableInvoiceDate');
+    if (dateEl) {
+      const dateStr = header.date || '';
+      dateEl.value = formatDateForForm(dateStr);
+    }
+
+    // Populate payment summary display
     if (document.getElementById('previewSubtotal')) {
       const subtotal = header.subtotal || 0;
       document.getElementById('previewSubtotal').textContent = parseFloat(subtotal).toLocaleString('en-US', { minimumFractionDigits: 2 });
@@ -588,28 +639,35 @@
   }
 
   function populateFormFields(header) {
-    const customerName = header.customer_name || '';
-    const customerPhone = header.phone || '';
-    const customerEmail = header.email || '';
-    const customerAddress = header.address || '';
-    const invoiceNumber = header.invoice_no || '';
-    const invoiceDate = header.date || '';
     const subtotal = header.subtotal || 0;
     const tax = header.tax || 0;
     const total = header.total || 0;
 
+    // Create function to get field value - prefer editable field if available, fallback to header
+    function getFieldValue(elementId, headerKey) {
+      const el = document.getElementById(elementId);
+      return el && el.value ? el.value : (header[headerKey] || '');
+    }
+
+    function getFieldNumValue(elementId, headerKey) {
+      const el = document.getElementById(elementId);
+      return el && el.value ? parseFloat(el.value) : (header[headerKey] || 0);
+    }
+
+    // Build form fields from editable inputs and header data
     const fields = [
-      { name: 'customer_name', value: customerName },
-      { name: 'customer_phone', value: customerPhone },
-      { name: 'customer_email', value: customerEmail },
-      { name: 'customer_address', value: customerAddress },
-      { name: 'invoice_number', value: invoiceNumber },
-      { name: 'invoice_date', value: formatDateForForm(invoiceDate) },
+      { name: 'customer_name', value: getFieldValue('editableCustomerName', 'customer_name') },
+      { name: 'customer_phone', value: getFieldValue('editableCustomerPhone', 'phone') },
+      { name: 'customer_email', value: getFieldValue('editableCustomerEmail', 'email') },
+      { name: 'customer_address', value: getFieldValue('editableCustomerAddress', 'address') },
+      { name: 'customer_type', value: document.getElementById('editableCustomerType')?.value || 'personal' },
+      { name: 'invoice_number', value: getFieldValue('editableInvoiceNo', 'invoice_no') },
+      { name: 'invoice_date', value: document.getElementById('editableInvoiceDate')?.value || '' },
       { name: 'subtotal', value: subtotal },
       { name: 'tax_amount', value: tax },
       { name: 'total_amount', value: total },
-      { name: 'code_no', value: header.code_no || '' },
-      { name: 'reference', value: header.reference || '' }
+      { name: 'code_no', value: getFieldValue('editableCodeNo', 'code_no') },
+      { name: 'reference', value: getFieldValue('editableReference', 'reference') }
     ];
 
     fields.forEach(field => {
@@ -623,6 +681,7 @@
       inp.value = field.value;
     });
 
+    // Add seller information if provided
     const sellerKeys = ['seller_name', 'seller_address', 'seller_phone', 'seller_email', 'seller_tax_id', 'seller_vat_reg'];
     sellerKeys.forEach(key => {
       if (header[key]) {
@@ -634,6 +693,35 @@
           hiddenFieldsDiv.appendChild(inp);
         }
         inp.value = header[key];
+      }
+    });
+  }
+
+  function updateFormFieldsFromEditable() {
+    // Update hidden form fields from current editable field values before form submission
+    const fields = [
+      { name: 'customer_name', elementId: 'editableCustomerName' },
+      { name: 'customer_phone', elementId: 'editableCustomerPhone' },
+      { name: 'customer_email', elementId: 'editableCustomerEmail' },
+      { name: 'customer_address', elementId: 'editableCustomerAddress' },
+      { name: 'customer_type', elementId: 'editableCustomerType' },
+      { name: 'invoice_number', elementId: 'editableInvoiceNo' },
+      { name: 'invoice_date', elementId: 'editableInvoiceDate' },
+      { name: 'code_no', elementId: 'editableCodeNo' },
+      { name: 'reference', elementId: 'editableReference' }
+    ];
+
+    fields.forEach(field => {
+      const el = document.getElementById(field.elementId);
+      if (el) {
+        let inp = invoiceForm.querySelector(`[name="${field.name}"]`);
+        if (!inp) {
+          inp = document.createElement('input');
+          inp.type = 'hidden';
+          inp.name = field.name;
+          hiddenFieldsDiv.appendChild(inp);
+        }
+        inp.value = el.value;
       }
     });
   }

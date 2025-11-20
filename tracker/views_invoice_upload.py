@@ -283,6 +283,24 @@ def api_create_invoice_from_upload(request):
                         'message': f'Error processing customer: {str(e)}'
                     })
 
+            # Update customer code with extracted Code No if available
+            extracted_code_no = request.POST.get('code_no', '').strip()
+            if extracted_code_no and customer_obj:
+                try:
+                    # Check if extracted code_no is different from the current code
+                    if customer_obj.code != extracted_code_no:
+                        # Check if this code is already used by another customer
+                        existing_customer = Customer.objects.filter(code=extracted_code_no).exclude(id=customer_obj.id).first()
+                        if not existing_customer:
+                            old_code = customer_obj.code
+                            customer_obj.code = extracted_code_no
+                            customer_obj.save(update_fields=['code'])
+                            logger.info(f"Updated customer {customer_obj.id} code from {old_code} to {extracted_code_no}")
+                        else:
+                            logger.warning(f"Code {extracted_code_no} already used by another customer {existing_customer.id}, keeping current code")
+                except Exception as e:
+                    logger.warning(f"Failed to update customer code with extracted code_no: {e}")
+
             # Get or create vehicle if plate provided
             vehicle = None
             if plate:
