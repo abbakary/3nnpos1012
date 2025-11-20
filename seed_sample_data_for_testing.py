@@ -152,9 +152,9 @@ def create_sample_data():
                 print(f"  ✓ {brand.name} - {item_name}")
     
     # Create 20 orders with different statuses
-    print("\n[4] Creating 20 Orders with All Statuses...")
+    print("\n[4] Creating 20 Orders - Auto-Progress Demonstration...")
     print("-" * 70)
-    
+
     orders_by_status = {
         'created': [],
         'in_progress': [],
@@ -162,59 +162,71 @@ def create_sample_data():
         'completed': [],
         'cancelled': []
     }
-    
+
     # Helper to calculate timestamps for orders
-    def create_timestamps_for_status(status, base_days_ago=0):
-        """Create appropriate timestamps based on order status"""
-        created = now - timedelta(days=base_days_ago, minutes=random.randint(1, 30))
+    def create_timestamps_for_status(status):
+        """
+        Create appropriate timestamps based on order status.
+
+        Auto-progression timeline:
+        1. created (0-9 minutes old) - stays in 'created' until 10 min elapsed
+        2. in_progress (10+ minutes old) - auto-progressed by middleware after 10 min
+        3. overdue (9+ working hours in progress) - marked by middleware when 9 hrs exceeded
+        """
         started = None
         completed = None
         cancelled = None
-        
+
         if status == 'created':
-            # Order created 0-5 minutes ago, not yet auto-progressed
-            created = now - timedelta(minutes=random.randint(1, 5))
-        
+            # Orders 1-8 minutes old - will NOT auto-progress yet (< 10 min)
+            # Middleware will auto-progress them once 10 minutes elapse
+            created = now - timedelta(minutes=random.randint(1, 8))
+            # Do NOT set started_at for created orders - middleware will set it after 10 min
+
         elif status == 'in_progress':
-            # Order created 15+ minutes ago, auto-progressed to in_progress
-            created = now - timedelta(minutes=random.randint(15, 120))
-            started = created + timedelta(minutes=10)  # Will be set by middleware after 10 mins
-        
+            # Orders 11-120 minutes old - already auto-progressed by middleware
+            # These were created 11+ minutes ago, so middleware already set them to 'in_progress'
+            # and set started_at = created_at
+            created = now - timedelta(minutes=random.randint(11, 120))
+            started = created  # Middleware sets started_at = created_at when auto-progressing
+
         elif status == 'overdue':
-            # Order created 9+ working hours ago
+            # Orders that have been in progress for 9+ working hours
             # Working hours: 8 AM to 5 PM (9 hours/day)
-            # Create order at 8 AM yesterday or earlier
-            yesterday_8am = (now - timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
-            created = yesterday_8am - timedelta(minutes=random.randint(1, 30))
-            started = created + timedelta(minutes=10)
-            # Status will be 'overdue' due to middleware calculation
-        
+            # Create order yesterday at 8:15 AM so it's in progress for 9+ hours
+            yesterday_815am = (now - timedelta(days=1)).replace(hour=8, minute=15, second=0, microsecond=0)
+            created = yesterday_815am
+            started = created  # Middleware will have set this after 10 min
+            # Middleware will mark as 'overdue' because:
+            # From yesterday 8:15 AM to now is 9+ working hours
+
         elif status == 'completed':
-            # Order created 1-30 days ago and completed
+            # Orders completed 1-30 days ago
             created = now - timedelta(days=random.randint(1, 30))
-            started = created + timedelta(minutes=10)
+            started = created + timedelta(minutes=10)  # Was auto-progressed
             completed = started + timedelta(hours=random.randint(2, 8))
-        
+
         elif status == 'cancelled':
-            # Order created 1-20 days ago and cancelled
+            # Orders cancelled 1-20 days ago
             created = now - timedelta(days=random.randint(1, 20))
-            started = created + timedelta(minutes=10)
+            started = created + timedelta(minutes=10)  # Was auto-progressed before cancelling
             cancelled = started + timedelta(minutes=random.randint(30, 240))
-        
+
         return created, started, completed, cancelled
-    
-    # Create orders: 4 of each status + 1 overdue = 20 orders
-    order_configs = [
-        # created status: 4 orders
-        ('created', 0), ('created', 0), ('created', 0), ('created', 0),
-        # in_progress status: 4 orders
-        ('in_progress', 0), ('in_progress', 0), ('in_progress', 0), ('in_progress', 0),
-        # overdue status: 4 orders (special: created 9+ hours ago)
-        ('overdue', 0), ('overdue', 0), ('overdue', 0), ('overdue', 0),
+
+    # Create orders: 4 of each status = 20 orders
+    # These are static to ensure predictable distribution
+    order_statuses = [
+        # created status: 4 orders (1-8 minutes old, will auto-progress after 10 min)
+        'created', 'created', 'created', 'created',
+        # in_progress status: 4 orders (11-120 minutes old, already auto-progressed)
+        'in_progress', 'in_progress', 'in_progress', 'in_progress',
+        # overdue status: 4 orders (created yesterday 8:15 AM, now 9+ working hours old)
+        'overdue', 'overdue', 'overdue', 'overdue',
         # completed status: 4 orders
-        ('completed', 5), ('completed', 10), ('completed', 20), ('completed', 30),
+        'completed', 'completed', 'completed', 'completed',
         # cancelled status: 4 orders
-        ('cancelled', 3), ('cancelled', 7), ('cancelled', 15), ('cancelled', 25),
+        'cancelled', 'cancelled', 'cancelled', 'cancelled',
     ]
     
     service_descriptions = [
