@@ -319,32 +319,73 @@ def create_sample_data():
     
     # Print summary
     print("\n" + "=" * 70)
-    print("SUMMARY")
+    print("SUMMARY - AUTO-PROGRESSION LIFECYCLE")
     print("=" * 70)
-    print(f"\nCustomers Created: {len(customers)}")
-    print(f"Vehicles Created:  {len(vehicles)}")
-    print(f"Total Orders:      {sum(len(orders) for orders in orders_by_status.values())}")
-    
-    print("\nOrder Distribution by Status:")
+
+    print(f"\nData Created:")
+    print(f"  Customers : {len(customers)}")
+    print(f"  Vehicles  : {len(vehicles)}")
+    print(f"  Total Orders : {sum(len(orders) for orders in orders_by_status.values())}")
+
+    print("\n" + "-" * 70)
+    print("Auto-Progression Flow (Middleware Driven):")
+    print("-" * 70)
+    print("""
+1. CREATED (1-8 minutes old)
+   → Stays in 'created' status until 10 minutes elapse
+   → Middleware checks and auto-progresses when created_at + 10 min < now
+   → started_at will be set to created_at by middleware
+
+2. IN PROGRESS (11+ minutes old)
+   → Auto-progressed from 'created' by middleware
+   → started_at = created_at (the moment it was created)
+   → Actively being worked on
+
+3. OVERDUE (9+ working hours in progress)
+   → Orders in 'in_progress' for 9+ working hours marked as 'overdue'
+   → Working hours: 8 AM - 5 PM (9 hours/day)
+   → Calculated by middleware based on started_at
+   → Example: Created yesterday 8:15 AM → now is 9+ working hours elapsed
+
+4. COMPLETED
+   → Orders finished with completed_at timestamp
+
+5. CANCELLED
+   → Orders cancelled with cancellation_reason
+""")
+
+    print("-" * 70)
+    print("Order Distribution by Status:")
+    print("-" * 70)
     for status, orders in orders_by_status.items():
-        print(f"  {status.replace('_', ' ').title():12s} : {len(orders):2d} orders")
-    
-    print("\nOrder Distribution by Type:")
+        if orders:
+            oldest = min(o.created_at for o in orders)
+            time_diff = (now - oldest).total_seconds() / 3600
+            print(f"  {status.replace('_', ' ').title():12s} : {len(orders):2d} orders (oldest: {time_diff:.1f} hours ago)")
+
+    print("\n" + "-" * 70)
+    print("Order Distribution by Type:")
+    print("-" * 70)
     service_count = Order.objects.filter(type='service').count()
     sales_count = Order.objects.filter(type='sales').count()
     inquiry_count = Order.objects.filter(type='inquiry').count()
-    print(f"  Service    : {service_count:2d} orders")
-    print(f"  Sales      : {sales_count:2d} orders")
-    print(f"  Inquiry    : {inquiry_count:2d} orders")
-    
-    print("\nCustomer Information:")
+    print(f"  Service : {service_count:2d} orders")
+    print(f"  Sales   : {sales_count:2d} orders")
+    print(f"  Inquiry : {inquiry_count:2d} orders")
+
+    print("\n" + "-" * 70)
+    print("Customer Visit Tracking:")
+    print("-" * 70)
     for customer in customers:
         visit_count = customer.total_visits
         order_count = customer.orders.count()
         print(f"  {customer.full_name:30s} | Visits: {visit_count:2d} | Orders: {order_count:2d}")
-    
+
     print("\n" + "=" * 70)
     print("✓ Sample data seeding completed successfully!")
+    print("\nNote: The middleware will automatically:")
+    print("  • Auto-progress 'created' orders to 'in_progress' after 10 minutes")
+    print("  • Mark 'in_progress' orders as 'overdue' when 9 working hours exceeded")
     print("=" * 70)
 
 if __name__ == '__main__':
